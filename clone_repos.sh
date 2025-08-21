@@ -8,11 +8,10 @@ DEST_DIR="repos"
 # Ensure destination exists
 mkdir -p "$DEST_DIR"
 
-# Get header and index of repo column
+# Get column index
 HEADER=$(head -n 1 "$CSV_FILE")
 IFS=',' read -ra COLUMNS <<< "$HEADER"
 
-# Find index of desired column
 col_index=-1
 for i in "${!COLUMNS[@]}"; do
   if [[ "${COLUMNS[$i]}" == "$REPO_COLUMN" ]]; then
@@ -26,20 +25,33 @@ if [[ $col_index -lt 0 ]]; then
   exit 1
 fi
 
-# Read and process lines (excluding header)
-tail -n +2 "$CSV_FILE" | while IFS=',' read -ra FIELDS; do
-  URL="${FIELDS[$col_index]}"
-  # Clean whitespace and quotes
-  URL=$(echo "$URL" | tr -d '"' | xargs)
+echo "🔍 Found column '$REPO_COLUMN' at index $col_index"
+echo "📁 Cloning repos to '$DEST_DIR'..."
+
+# Function to extract URL from CSV line respecting quotes
+extract_url() {
+  line="$1"
+  echo "$line" | awk -v col=$((col_index+1)) '
+    BEGIN {
+      FPAT = "([^,]*)|(\"[^\"]+\")"
+    }
+    {
+      gsub(/^"|"$/, "", $col)  # remove surrounding quotes
+      print $col
+    }'
+}
+
+# Read CSV line by line
+tail -n +2 "$CSV_FILE" | while IFS= read -r line; do
+  URL=$(extract_url "$line" | xargs)
+
   if [[ -z "$URL" ]]; then
     continue
   fi
 
-  # Get slug
   SLUG=$(echo "$URL" | sed -E 's~https?://(www\.)?github\.com/~~' | sed 's/\.git$//' | cut -d'/' -f1,2)
   SLUG_SAFE=$(echo "$SLUG" | tr '/' '__')
 
-  # Check if already cloned
   if [[ -d "$DEST_DIR/$SLUG_SAFE" ]]; then
     echo "✅ Skipping $SLUG (already exists)"
     continue

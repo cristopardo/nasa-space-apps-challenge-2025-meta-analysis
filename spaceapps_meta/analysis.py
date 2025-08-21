@@ -5,7 +5,7 @@ from pathlib import Path
 from typing import List, Dict, Any
 import pandas as pd
 from .io import read_repo_urls
-from .gitmeta import analyze_repo
+from .gitmeta import analyze_repo_local
 import time
 from datetime import datetime
 
@@ -20,7 +20,7 @@ def analyze_from_csv(csv_path: str, url_col: str = "Github", jobs: int = None) -
     start_time = time.time()
 
     with ThreadPoolExecutor(max_workers=max(1, jobs)) as ex:
-        futs = {ex.submit(analyze_repo, url): url for url in urls}
+        futs = {ex.submit(analyze_repo_local, url, "repos"): url for url in urls}
         for idx, fut in enumerate(as_completed(futs), 1):
             url = futs[fut]
             try:
