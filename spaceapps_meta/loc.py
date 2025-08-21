@@ -16,6 +16,7 @@ def has_cloc() -> bool:
 
 
 def count_lines_with_cloc(repo_dir: Path) -> Optional[int]:
+    print(f"🧮 [cloc] Counting lines in {repo_dir.name}...")
     r, out, err = _run(['cloc', '--json', '--quiet', '--git', '.'], cwd=repo_dir)
     if r != 0:
         return None
@@ -30,6 +31,7 @@ def count_lines_with_cloc(repo_dir: Path) -> Optional[int]:
 
 def count_lines_with_wc(repo_dir: Path) -> int:
     # Sum wc -l over text files tracked by git; skip common binary extensions
+    print(f"🧮 [wc] Counting lines in {repo_dir.name}...")
     r, out, err = _run(['git', 'ls-files', '-z'], cwd=repo_dir)
     files = [f for f in out.split('\x00') if f]
     total = 0
