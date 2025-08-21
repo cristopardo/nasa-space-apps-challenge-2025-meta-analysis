@@ -21,6 +21,7 @@ def read_repo_urls(csv_path: Path, url_col: str = "Github") -> List[str]:
             url = (row.get(url_col) or '').strip()
             if url:
                 urls.append(url)
+    print(f"📄 CSV {csv_path.name}: {len(urls)} repo URLs found.")
     return urls
 
 
