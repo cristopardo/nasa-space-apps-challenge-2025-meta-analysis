@@ -6,6 +6,8 @@ from typing import List, Dict, Any
 import pandas as pd
 from .io import read_repo_urls
 from .gitmeta import analyze_repo
+import time
+from datetime import datetime
 
 
 def analyze_from_csv(csv_path: str, url_col: str = "Github", jobs: int = None) -> pd.DataFrame:
@@ -14,13 +16,23 @@ def analyze_from_csv(csv_path: str, url_col: str = "Github", jobs: int = None) -
     urls: List[str] = read_repo_urls(csv_path, url_col=url_col)
     rows: List[Dict[str, Any]] = []
 
+    print(f"[{datetime.now().isoformat(timespec='seconds')}] 🔍 Analyzing {len(urls)} repositories with {jobs} threads...")
+    start_time = time.time()
+
     with ThreadPoolExecutor(max_workers=max(1, jobs)) as ex:
         futs = {ex.submit(analyze_repo, url): url for url in urls}
-        for fut in as_completed(futs):
+        for idx, fut in enumerate(as_completed(futs), 1):
+            url = futs[fut]
             try:
-                rows.append(fut.result())
+                result = fut.result()
+                print(f"[{datetime.now().isoformat(timespec='seconds')}] ✅ [{idx}/{len(urls)}] {url} → {result.get('clone_status')}")
+                rows.append(result)
             except Exception as e:
-                rows.append({'repo_url': futs[fut], 'clone_status': f'ERROR: {e}'})
+                print(f"[{datetime.now().isoformat(timespec='seconds')}] ❌ [{idx}/{len(urls)}] {url} → ERROR: {e}")
+                rows.append({'repo_url': url, 'clone_status': f'ERROR: {e}'})
+
+    elapsed = round(time.time() - start_time, 2)
+    print(f"[{datetime.now().isoformat(timespec='seconds')}] ✅ Finished in {elapsed} seconds.")
 
     df = pd.DataFrame(rows)
     col_order = [
